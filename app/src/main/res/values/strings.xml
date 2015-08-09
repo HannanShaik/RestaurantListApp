@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Restaurant Offers</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="category_lbl">Categories</string>
+    <string name="restaurant_name_lbl">Name</string>
+    <string name="offers_lbl">Offers</string>
+    <string name="location_lbl">Location</string>
+    <string name="distance_lbl">205 m</string>
+</resources>
