@@ -1,5 +1,6 @@
 package com.hs.cardviewlist.model;
 
+import com.activeandroid.ActiveAndroid;
 import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
@@ -89,6 +90,20 @@ public class Restaurant extends Model implements Serializable{
                 ", LogoURL='" + LogoURL + '\'' +
                 ", CoverURL='" + CoverURL + '\'' +
                 '}';
+    }
+
+
+    public static void truncate() {
+        List<Restaurant> restaurantList = Restaurant.getAll();
+        ActiveAndroid.beginTransaction();
+        try {
+            for (Restaurant restaurant : restaurantList) {
+                restaurant.delete();
+            }
+            ActiveAndroid.setTransactionSuccessful();
+        } finally {
+            ActiveAndroid.endTransaction();
+        }
     }
 
 }

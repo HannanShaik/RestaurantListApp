@@ -61,7 +61,9 @@ public class RestaurantListAdapter extends RecyclerView.Adapter<RestaurantListAd
                 .load(restaurant.LogoURL)
                 .into(holder.restaurantLogo);
 
-        holder.restaurantDistance.setText(getDistanceToRestaurant() + "  " + getAreaName());
+        holder.restaurantDistance.setText(getDistanceToRestaurant()
+                + "  "
+                + getAreaName(context, Double.parseDouble(restaurant.Latitude), Double.parseDouble(restaurant.Longitude)));
 
     }
 
@@ -115,11 +117,11 @@ public class RestaurantListAdapter extends RecyclerView.Adapter<RestaurantListAd
         return "0 km";
     }
 
-    public String getAreaName(){
+    public String getAreaName(Context context,Double latitude,Double longitude){
         Geocoder geocoder = new Geocoder(context);
         try {
             List<Address> addresses = geocoder
-                    .getFromLocation(Double.parseDouble(restaurant.Latitude), Double.parseDouble(restaurant.Longitude), 1);
+                    .getFromLocation(latitude, longitude, 1);
 
             if(addresses!=null)
                 return addresses.get(0).getSubLocality();
@@ -128,4 +130,5 @@ public class RestaurantListAdapter extends RecyclerView.Adapter<RestaurantListAd
         }
         return "";
     }
+
 }

@@ -1,15 +1,13 @@
 package com.hs.cardviewlist.fragment;
 
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -17,12 +15,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.hs.cardviewlist.MainActivity;
+import com.hs.cardviewlist.NetworkUtils;
 import com.hs.cardviewlist.R;
 import com.hs.cardviewlist.adapter.RestaurantListAdapter;
 import com.hs.cardviewlist.model.Restaurant;
@@ -43,7 +43,7 @@ public class RestaurantListFragment extends Fragment implements GoogleApiClient.
     ProgressDialog pd;
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
-
+    private SwipeRefreshLayout mSwipeRefreshLayout;
 
     public RestaurantListFragment(){}
 
@@ -64,28 +64,45 @@ public class RestaurantListFragment extends Fragment implements GoogleApiClient.
         restaurantListView.setLayoutManager(layoutManager);
         restaurantListView.setItemAnimator(new DefaultItemAnimator());
         restaurantListView.setAdapter(restaurantListAdapter);
+
+        mSwipeRefreshLayout = (SwipeRefreshLayout) rootView.findViewById(R.id.sr_swipe);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                if (NetworkUtils.getInstance(getActivity()).isConnected()) {
+                    Log.e("", "Connected");
+                    syncRestaurants();
+                } else {
+                    Toast.makeText(getActivity(), "No Internet Connection! Please try later!", Toast.LENGTH_SHORT).show();
+                    if (mSwipeRefreshLayout.isRefreshing()) {
+                        mSwipeRefreshLayout.setRefreshing(false);
+                    }
+                }
+            }
+        });
+
         return rootView;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final LocationManager manager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
-        if ( !manager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
-            showGPSAlertPopup();
-        } else {
-            buildGoogleApiClient();
-            mGoogleApiClient.connect();
-            new RequestHandler(((MainActivity) getActivity()).getSpiceManager())
-                    .getRestaurantsAround(new RestaurantListRequestListener());
-            pd = ProgressDialog.show(getActivity(), "Please Wait...", "Fetching near by restaurants!");
-        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
+
+        final LocationManager manager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+        if (manager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
+            buildGoogleApiClient();
+            mGoogleApiClient.connect();
+            if(Restaurant.getAll().size() == 0) {
+                pd = ProgressDialog.show(getActivity(), "Please Wait...", "Fetching near by restaurants!");
+                syncRestaurants();
+            }
+        }
 
         this.restaurants.clear();
         this.restaurants.addAll(Restaurant.getAll());
@@ -121,20 +138,38 @@ public class RestaurantListFragment extends Fragment implements GoogleApiClient.
         Log.e("RESTAURANT APP", "Failed to get location");
     }
 
+    private void syncRestaurants(){
+        new RequestHandler(((MainActivity) getActivity()).getSpiceManager())
+                .getRestaurantsAround(new RestaurantListRequestListener());
+        mSwipeRefreshLayout.setRefreshing(true);
+
+    }
+
     class RestaurantListRequestListener implements RequestListener<List<Restaurant>>{
 
         @Override
         public void onRequestFailure(SpiceException spiceException) {
             pd.dismiss();
             Toast.makeText(getActivity(),"Error occurred While fetching restaurant list!",Toast.LENGTH_SHORT).show();
+            if (mSwipeRefreshLayout.isRefreshing()) {
+                mSwipeRefreshLayout.setRefreshing(false);
+            }
+            if(pd!=null && pd.isShowing())
+                pd.dismiss();
         }
 
         @Override
         public void onRequestSuccess(List<Restaurant> restaurantsList) {
+
             restaurants.clear();
             restaurants.addAll(restaurantsList);
             restaurantListAdapter.notifyDataSetChanged();
-            pd.dismiss();
+
+            if(pd!=null && pd.isShowing())
+                pd.dismiss();
+            if (mSwipeRefreshLayout.isRefreshing()) {
+                mSwipeRefreshLayout.setRefreshing(false);
+            }
         }
     }
 
@@ -146,23 +181,4 @@ public class RestaurantListFragment extends Fragment implements GoogleApiClient.
                 .build();
     }
 
-    public void showGPSAlertPopup(){
-
-            final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-            builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
-                    .setCancelable(false)
-                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                        public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                        }
-                    })
-                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                        public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                            dialog.cancel();
-                        }
-                    });
-            final AlertDialog alert = builder.create();
-            alert.show();
-
-    }
 }

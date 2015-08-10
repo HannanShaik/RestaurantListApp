@@ -39,18 +39,22 @@ public class RequestHandler {
             public void onRequestSuccess(JsonObject jsonObject) {
                 List<Restaurant> restaurants = new ArrayList<>();
                 Gson gson = new GsonBuilder().create();
-                JsonObject dataJson = jsonObject.getAsJsonObject("data");
-                for(Map.Entry<String,JsonElement> entry:dataJson.entrySet()){
-                    JsonObject restaurantJson = dataJson.getAsJsonObject(entry.getKey());
+                if (jsonObject.getAsJsonObject("status").get("rcode").getAsInt() == 200) {
+                    //Remove old entries
+                    Restaurant.truncate();
 
-                    Restaurant restaurant = new Restaurant();
-                    restaurant = gson.fromJson(restaurantJson, Restaurant.class);
-                    restaurant.categoriesList = gson.toJson(restaurant.Categories);
-                    restaurant.save();
+                    JsonObject dataJson = jsonObject.getAsJsonObject("data");
+                    for (Map.Entry<String, JsonElement> entry : dataJson.entrySet()) {
+                        JsonObject restaurantJson = dataJson.getAsJsonObject(entry.getKey());
 
-                    restaurants.add(restaurant);
+                        Restaurant restaurant = gson.fromJson(restaurantJson, Restaurant.class);
+                        restaurant.categoriesList = gson.toJson(restaurant.Categories);
+                        restaurant.save();
+
+                        restaurants.add(restaurant);
+                    }
+                    requestListener.onRequestSuccess(restaurants);
                 }
-                requestListener.onRequestSuccess(restaurants);
             }
         });
     }
