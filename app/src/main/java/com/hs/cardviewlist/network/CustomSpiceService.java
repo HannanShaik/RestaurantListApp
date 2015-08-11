@@ -32,7 +32,7 @@ public class CustomSpiceService extends RetrofitSpiceService {
 
     @Override
     protected String getServerUrl() {
-        return "http://staging.couponapitest.com";
+        //return YOUR SERVICE URL;
     }
 
     @Override
